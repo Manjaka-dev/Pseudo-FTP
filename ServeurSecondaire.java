@@ -2,15 +2,19 @@ import java.io.*;
 import java.net.*;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Set;
 
 public class ServeurSecondaire {
     private static int port = 5004;  // Le port sur lequel le serveur secondaire écoute pour recevoir des fichiers
-    private static final String LOG_FILE = "ServeurSecondaire1.log";
+    private static final String LOG_FILE = "ServeurSecondaire.log";
     private static final int BROADCAST_PORT = 6002; // Le port sur lequel le serveur secondaire écoute pour les messages de diffusion
     private static int responsePort = 6005; // Le port sur lequel le serveur secondaire envoie les informations de connexion
     private static final SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-    private static final String otherServerIp = "127.0.0.1";
-    private static final int otherServerPort = 5004;
+    private static final String otherServerIp = "127.0.0.1"; // Adresse IP de l'autre serveur secondaire
+    private static final int otherServerPort = 5003;
+    private static final Set<String> replicatedFiles = Collections.synchronizedSet(new HashSet<>()); // Ensemble pour suivre les fichiers répliqués
 
     public static void main(String[] args) {
         if (args.length >= 3) {
@@ -61,19 +65,16 @@ public class ServeurSecondaire {
                         try {
                             String message = new DataInputStream(new ByteArrayInputStream(packet.getData(), 0, packet.getLength())).readUTF();
                             log("Message de diffusion reçu : " + message);
-                            System.out.println("Message de diffusion reçu : " + message);
                             if ("REQUEST_INFO".equals(message)) {
                                 sendResponse(packet.getAddress(), port);
                             }
                         } catch (IOException e) {
                             log("Erreur lors de la réception du message de diffusion : " + e.getMessage());
-                            System.out.println("Erreur lors de la réception du message de diffusion : " + e.getMessage());
                         }
                     }).start();
                 }
             } catch (IOException e) {
                 log("Erreur lors de la réception du message de diffusion : " + e.getMessage());
-                System.out.println("Erreur lors de la réception du message de diffusion : " + e.getMessage());
             }
         }).start();
     }
@@ -89,10 +90,8 @@ public class ServeurSecondaire {
                 DatagramPacket packet = new DatagramPacket(buffer, buffer.length, address, responsePort);
                 socket.send(packet);
                 log("Réponse envoyée : " + response);
-                System.out.println("Réponse envoyée : " + response);
             } catch (IOException e) {
                 log("Erreur lors de l'envoi de la réponse : " + e.getMessage());
-                System.out.println("Erreur lors de l'envoi de la réponse : " + e.getMessage());
             }
         }).start();
     }
@@ -151,10 +150,12 @@ public class ServeurSecondaire {
 
                 log("Fichier " + fileName + " reçu et sauvegardé.");
                 dos.writeUTF("Fichier reçu et sauvegardé avec succès.");
-                log("Message de confirmation envoyé au client");
 
                 // Réplication
-                replicateFile(fileName, fileSize, otherServerIp, otherServerPort);
+                if (!replicatedFiles.contains(fileName)) {
+                    replicateFile(fileName, fileSize, otherServerIp, otherServerPort);
+                    replicatedFiles.add(fileName); // Marquer la réplication comme effectuée
+                }
 
             } catch (IOException e) {
                 try {
@@ -167,10 +168,15 @@ public class ServeurSecondaire {
         }
 
         private void replicateFile(String fileName, long fileSize, String otherServerIp, int otherServerPort) {
+            // Choisir un autre serveur secondaire pour la réplication
+
             if (otherServerIp.equals("") || otherServerPort == 0) {
                 log("Adresse IP ou port du serveur secondaire non défini pour la réplication");
                 return;
             }
+
+            System.out.println("Début de la réplication du fichier : " + fileName + " vers " + otherServerIp + ":" + otherServerPort);
+
             try (Socket socket = new Socket(otherServerIp, otherServerPort);
                  DataOutputStream dos = new DataOutputStream(socket.getOutputStream());
                  FileInputStream fis = new FileInputStream("storage/" + fileName)) {
@@ -185,12 +191,14 @@ public class ServeurSecondaire {
                     dos.write(buffer, 0, bytesRead);
                 }
 
+                System.out.println("Fichier " + fileName + " répliqué à " + otherServerIp + ":" + otherServerPort);
                 log("Fichier " + fileName + " répliqué à " + otherServerIp + ":" + otherServerPort);
 
                 // Informer le serveur principal de la réplication
                 informPrincipal(fileName, otherServerIp, otherServerPort);
 
             } catch (IOException e) {
+                System.out.println("Erreur lors de la réplication du fichier : " + e.getMessage());
                 log("Erreur lors de la réplication du fichier : " + e.getMessage());
             }
         }
@@ -204,9 +212,11 @@ public class ServeurSecondaire {
                 dos.writeUTF(otherServerIp);
                 dos.writeInt(otherServerPort);
 
-                log("Information de réplication envoyée au serveur principal");
+                System.out.println("Information de réplication envoyée au serveur principal pour le fichier : " + fileName);
+                log("Information de réplication envoyée au serveur principal pour le fichier : " + fileName);
 
             } catch (IOException e) {
+                System.out.println("Erreur lors de l'envoi de l'information de réplication au serveur principal : " + e.getMessage());
                 log("Erreur lors de l'envoi de l'information de réplication au serveur principal : " + e.getMessage());
             }
         }

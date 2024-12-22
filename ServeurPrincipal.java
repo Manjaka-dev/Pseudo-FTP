@@ -10,7 +10,7 @@ import java.util.concurrent.TimeUnit;
 
 public class ServeurPrincipal {
 
-    private static final List<StorageServerInfo> storageServers = new ArrayList<>();
+    private static List<StorageServerInfo> storageServers = Collections.synchronizedList(new ArrayList<>());
     private static final String LOG_FILE = "ServeurPrincipal.log";
     private static final String CONFIG_FILE = "listServer.conf";
     private static final int BROADCAST_PORT_START = 6001; // Début de la plage de ports pour envoyer les messages de diffusion
@@ -52,22 +52,35 @@ public class ServeurPrincipal {
     }
 
     private static void loadStorageServerConfig(String configFilePath) {
-        storageServers.clear(); // Clear the list before loading new configuration
-        try (BufferedReader br = new BufferedReader(new FileReader(configFilePath))) {
-            String line;
-            while ((line = br.readLine()) != null) {
-                String[] parts = line.split(":");
-                if (parts.length == 2) {
-                    String ip = parts[0];
-                    int port = Integer.parseInt(parts[1]);
-                    storageServers.add(new StorageServerInfo(ip, port));
+        synchronized (storageServers) {
+            storageServers.clear(); // Clear the list before loading new configuration
+            try (BufferedReader br = new BufferedReader(new FileReader(configFilePath))) {
+                String line;
+                while ((line = br.readLine()) != null) {
+                    String[] parts = line.split(":");
+                    if (parts.length == 2) {
+                        String ip = parts[0];
+                        int port = Integer.parseInt(parts[1]);
+                        StorageServerInfo serverInfo = new StorageServerInfo(ip, port);
+                        if (!storageServers.contains(serverInfo)) {
+                            storageServers.add(serverInfo);
+                            log("Configuration mise à jour avec : " + ip + ":" + port);
+                            System.out.println("Configuration mise à jour avec : " + ip + ":" + port);
+                        } else {
+                            log("Configuration déjà présente : " + ip + ":" + port);
+                            System.out.println("Configuration déjà présente : " + ip + ":" + port);
+                        }
+                    }
                 }
+                log("Configuration des serveurs de stockage chargée.");
+                System.out.println("Configuration des serveurs de stockage chargée : " + storageServers.size() + " serveurs.");
+                for (StorageServerInfo storageServerInfo : storageServers) {
+                    System.out.println(storageServerInfo);
+                }
+            } catch (IOException e) {
+                log("Erreur lors du chargement de la configuration : " + e.getMessage());
+                System.out.println("Erreur lors du chargement de la configuration : " + e.getMessage());
             }
-            log("Configuration des serveurs de stockage chargée.");
-            System.out.println("Configuration des serveurs de stockage chargée : " + storageServers.size() + " serveurs.");
-        } catch (IOException e) {
-            log("Erreur lors du chargement de la configuration : " + e.getMessage());
-            System.out.println("Erreur lors du chargement de la configuration : " + e.getMessage());
         }
     }
 
@@ -245,7 +258,7 @@ public class ServeurPrincipal {
 
             int activeServers = storageServers.size();
             System.out.println("Nombre de serveurs actifs : " + activeServers);
-            long minPartSize = 5 * 1024 * 1024; // 5 Mo en octets
+            long minPartSize = 1 * 1024 * 1024; // 1 Mo en octets (ajusté pour des tests plus petits)
             int partCount = (int) Math.ceil((double) fileSize / minPartSize);
 
             // S'assurer que le nombre de parts ne dépasse pas le nombre de serveurs actifs
@@ -253,8 +266,9 @@ public class ServeurPrincipal {
 
             // S'assurer que partCount est au moins 1
             partCount = Math.max(partCount, 1);
+            System.out.println("Nombre de parties : " + partCount);
 
-            java.util.List<File> parts = splitFile(tempFile, partCount);
+            List<File> parts = splitFile(tempFile, partCount);
             System.out.println("Fichier divisé en " + parts.size() + " parties.");
 
             for (int i = 0; i < parts.size(); i++) {
@@ -287,23 +301,23 @@ public class ServeurPrincipal {
             }
         }
 
-        private java.util.List<File> splitFile(File file, int partCount) throws IOException {
-            java.util.List<File> parts = new ArrayList<>();
-            try (FileInputStream fis = new FileInputStream(file)) {
-                long partSize = file.length() / partCount;
-                byte[] buffer = new byte[4096];
+        private List<File> splitFile(File file, int partCount) throws IOException {
+            List<File> parts = new ArrayList<>();
+            long partSize = file.length() / partCount;
+            long remainingBytes = file.length() % partCount;
 
+            try (BufferedInputStream bis = new BufferedInputStream(new FileInputStream(file))) {
                 for (int i = 0; i < partCount; i++) {
-                    File part = new File(file.getName() + ".part" + (i + 1));
-                    try (FileOutputStream fos = new FileOutputStream(part)) {
-                        long written = 0;
-                        int read;
-                        while (written < partSize && (read = fis.read(buffer)) != -1) {
-                            fos.write(buffer, 0, read);
-                            written += read;
+                    File partFile = new File(file.getName() + ".part" + i);
+                    try (BufferedOutputStream bos = new BufferedOutputStream(new FileOutputStream(partFile))) {
+                        long bytesToWrite = partSize + (i < remainingBytes ? 1 : 0);
+                        byte[] buffer = new byte[4096];
+                        int bytesRead;
+                        while (bytesToWrite > 0 && (bytesRead = bis.read(buffer, 0, (int) Math.min(buffer.length, bytesToWrite))) != -1) {
+                            bos.write(buffer, 0, bytesRead);
                         }
                     }
-                    parts.add(part);
+                    parts.add(partFile);
                 }
             }
             return parts;
@@ -557,6 +571,19 @@ public class ServeurPrincipal {
         @Override
         public String toString() {
             return ip + ":" + port;
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            if (this == obj) return true;
+            if (obj == null || getClass() != getClass()) return false;
+            StorageServerInfo that = (StorageServerInfo) obj;
+            return port == that.port && Objects.equals(ip, that.ip);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(ip, port);
         }
     }
 }
