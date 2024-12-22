@@ -1,0 +1,35 @@
+2024-12-22 10:35:43 - Serveur secondaire démarré sur le port 5003.
+2024-12-22 10:35:52 - Erreur lors de la réception du message de diffusion : Address already in use
+2024-12-22 10:35:52 - Serveur secondaire démarré sur le port 5004.
+2024-12-22 10:55:26 - Serveur secondaire démarré sur le port 5003.
+2024-12-22 10:55:34 - Erreur lors de la réception du message de diffusion : Address already in use
+2024-12-22 10:55:34 - Serveur secondaire démarré sur le port 5004.
+2024-12-22 10:56:44 - Serveur secondaire démarré sur le port 5003.
+2024-12-22 10:57:07 - Erreur lors de la réception du message de diffusion : Address already in use
+2024-12-22 10:57:07 - Serveur secondaire démarré sur le port 5004.
+2024-12-22 11:11:52 - Serveur secondaire démarré sur le port 5003.
+2024-12-22 11:12:07 - Serveur secondaire démarré sur le port 5004.
+2024-12-22 11:12:43 - Message de diffusion reçu : REQUEST_INFO
+2024-12-22 11:12:43 - Message de diffusion reçu : REQUEST_INFO
+2024-12-22 11:13:13 - Message de diffusion reçu : REQUEST_INFO
+2024-12-22 11:13:13 - Message de diffusion reçu : REQUEST_INFO
+2024-12-22 11:13:13 - Réponse envoyée : 127.0.0.1:54972
+2024-12-22 11:13:13 - Réponse envoyée : 127.0.0.1:59435
+2024-12-22 11:13:42 - Message de diffusion reçu : REQUEST_INFO
+2024-12-22 11:13:43 - Message de diffusion reçu : REQUEST_INFO
+2024-12-22 11:13:43 - Réponse envoyée : 127.0.0.1:57794
+2024-12-22 11:13:43 - Réponse envoyée : 127.0.0.1:52789
+2024-12-22 11:16:04 - Serveur secondaire démarré sur le port 5003.
+2024-12-22 11:16:24 - Serveur secondaire démarré sur le port 5004.
+2024-12-22 11:17:06 - Message de diffusion reçu : REQUEST_INFO
+2024-12-22 11:17:06 - Message de diffusion reçu : REQUEST_INFO
+2024-12-22 11:17:36 - Message de diffusion reçu : REQUEST_INFO
+2024-12-22 11:17:36 - Message de diffusion reçu : REQUEST_INFO
+2024-12-22 11:17:36 - Réponse envoyée : 127.0.0.1:5004
+2024-12-22 11:17:36 - Réponse envoyée : 127.0.0.1:5003
+2024-12-22 11:43:38 - Serveur secondaire démarré sur le port 5003.
+2024-12-22 11:44:49 - Message de diffusion reçu : REQUEST_INFO
+2024-12-22 11:45:19 - Message de diffusion reçu : REQUEST_INFO
+2024-12-22 11:45:19 - Réponse envoyée : 127.0.0.1:5003
+2024-12-22 11:45:49 - Message de diffusion reçu : REQUEST_INFO
+2024-12-22 11:45:49 - Réponse envoyée : 127.0.0.1:5003
